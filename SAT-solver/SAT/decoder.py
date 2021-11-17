@@ -34,7 +34,7 @@ def read_DIMACS (file_name):
 def encode_DIMACS(suduku, num, size):
     rules_file = read_file(f"sudoku-rules-{size}x{size}.txt")
     # saves it in folder under size 
-    file_name = f"tests/{size}x{size}/sudoku_nr_{num + 1}.txt"
+    file_name = f"tests/{size}x{size}/sudoku_nr_{num}.txt"
     textfile = open(file_name, "w")
     for line in rules_file:
         textfile.write(line + "\n")

@@ -31,4 +31,6 @@ def make_suduku_files(all_sudukus_file):
 
 make_suduku_files("4x4.txt")
 print(os.getcwd())
-execute_main(['SA','-S1', '/Users/maike/Desktop/SAT-solver/tests/4x4/sudoku_nr_100.txt'])
+num_suduku = 100
+link_to_suduku = os.path.join(os.getcwd(), f'tests/4x4/sudoku_nr_{num_suduku}.txt')
+execute_main(['SA','-S1', link_to_suduku])
