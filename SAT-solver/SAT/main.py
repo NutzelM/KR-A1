@@ -7,7 +7,6 @@ def execute_main(args: list):
     from SAT.dpll import solve_equation
     solver = solve_equation(equation, num_heuristic)
     print(solver)
-
 if __name__ == "__main__":
     execute_main(sys.argv)
     execute_main()
