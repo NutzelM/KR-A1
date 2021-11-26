@@ -1,9 +1,14 @@
 from io import DEFAULT_BUFFER_SIZE
+from math import e
 import random
 import copy
-import numpy as np
+from operator import eq, itemgetter
+backtrack = 0 
+split = 0
 
 def dpll(equation, p):
+    global backtrack
+    global split
     # returns dictionary of all literals with the amount of times they appear
     def all_literals(equation):
         dict_literals = {}
@@ -77,39 +82,47 @@ def dpll(equation, p):
     # make deep copies of equation and p for backtracking
     equation_copy = copy.deepcopy(equation)
     p_copy = copy.deepcopy(p)
-
+    
+    split += 1 
     new_sol, assign = dpll(simplify(equation, l), p + [l])
     if assign: 
         return new_sol, True
     
     #backtracking
+    backtrack += 1
     return dpll(simplify(equation_copy, -l), p_copy + [-l])
-def dpll_JW_TS(equation, p):
+
+def dpll_MV(equation, p):
     # return list of JW2 score of each literal
-    def JW2(formula):
-        variable_list = {}
-        bigger_than_list = {}
-        for clause in formula:
+    global split
+    global backtrack
+
+    def most_var(equation):
+        dict_variables = {}
+        which_literal = {}
+        for clause in equation:
             for literal in clause:
                 variable = abs(literal)
-                if variable in variable_list:
-                    if literal > 0 : 
-                        bigger_than_list[literal] += 2 ** -len(clause)
-                    else :
-                        bigger_than_list[literal] -= 2 ** -len(clause)
-                    variable_list[literal] += 2 ** -len(clause)
+                if literal in dict_variables:
+                    dict_variables[variable] += 1
+                    if literal > 0:
+                        which_literal[variable] += 1
+                    else:
+                        which_literal[variable] -= 1
                 else:
-                    if literal > 0 : 
-                        bigger_than_list[literal] = 2 ** -len(clause)
-                    else :
-                        bigger_than_list[literal] - 2 ** -len(clause)
-                    variable_list[literal] = 2 ** -len(clause)
-        return variable_list, bigger_than_list
+                    dict_variables[variable] = 1
+                    if literal > 0:
+                        which_literal[variable] = 1
+                    else:
+                        which_literal[variable] = - 1
+        return dict_variables, which_literal
     
-    def max_score_JW2(equation):
-        variable_list, bigger_than_list = JW2(equation)
-        max_score = max(variable_list, key=variable_list.get)
-        return max_score, bigger_than_list[max_score]
+    def select_most_var(equation):
+        dict_variables, which_literal = most_var(equation)
+        max_variable = max(dict_variables, key = dict_variables.get)
+        select_literal = (which_literal[max_variable] >= 0)
+        return max_variable, select_literal
+
     
     # checks if there is a empty clause or a unit clause
     def check_empty_unit(equation) : 
@@ -160,24 +173,26 @@ def dpll_JW_TS(equation, p):
     # if equation is empty SAT
     if len(equation) == 0: return p, True 
     
-    # random choice of literal, branching step
-    l, bigger_than = max_score_JW2(equation)
-
-    # if J(I) < J(not I) then assign False 
-    if not bigger_than : 
+    # chose variable that occurs most, if -l occurs more than l, then -l = true
+    l, select_literal = select_most_var(equation)
+    if not select_literal :
         l = -l
 
     # make deep copies of equation and p for backtracking
     equation_copy = copy.deepcopy(equation)
     p_copy = copy.deepcopy(p)
-
-    new_sol, assign = dpll_JW_TS(simplify(equation, l), p + [l])
+    l_copy = copy.deepcopy(l)
+    split += 1 
+    new_sol, assign = dpll_MV(simplify(equation, l), p + [l])
     if assign: 
         return new_sol, True
     
     #backtracking
-    return dpll_JW_TS(simplify(equation_copy, -l), p_copy + [-l])
+    backtrack += 1
+    return dpll_MV(simplify(equation_copy, -l_copy), p_copy + [-l_copy])
 def dpll_MOM(equation, p):
+    global split
+    global backtrack
     # returns dictionary of all literals with the amount of times they appear
     def all_literals(equation):
         dict_literals = {}
@@ -189,10 +204,25 @@ def dpll_MOM(equation, p):
                     dict_literals[literal] = 1
         return dict_literals
 
-    # produce a random literal from the all_literals list
-    def random_literal(equation):
-        dict_literals = all_literals(equation)
-        return random.choice(list(dict_literals.keys()))
+    # MOM Heuristic
+    def mom(equation, k = 1):
+        s = []
+        min_clause = len(min(equation, key=len))
+        # equation with only the minimum length clauses
+        min_len_equation = [x for x in equation if len(x)== min_clause]
+        # occurences of all literals
+        all_lit = all_literals(min_len_equation)
+        for clauses in min_len_equation:    
+            for literal in clauses:
+                # if -lit does not occur in min_len_equation, occurence = 0 
+                if str(-literal) in all_lit:
+                    occ_min_lit = all_lit[-literal]
+                else:
+                    occ_min_lit = 0
+                occ_lit = all_lit[literal] 
+                z = (occ_lit + occ_min_lit)*2**k + occ_min_lit*occ_lit
+                s.append((literal, z)) 
+            return max(s, key=itemgetter(1))[0]
 
     # checks if there is a empty clause or a unit clause
     def check_empty_unit(equation) : 
@@ -246,16 +276,16 @@ def dpll_MOM(equation, p):
     # make list of unassigned literals
     
     # MAX : IPV random moet dit dus MOM zijn! 
-    l = random_literal(equation)
+    l = mom(equation)
 
     # make deep copies of equation and p for backtracking
     equation_copy = copy.deepcopy(equation)
     p_copy = copy.deepcopy(p)
-
+    split +=1
     new_sol, assign = dpll_MOM(simplify(equation, l), p + [l])
     if assign: 
         return new_sol, True
-    
+    backtrack += 1
     #backtracking
     return dpll_MOM(simplify(equation_copy, -l), p_copy + [-l])
 
@@ -264,7 +294,7 @@ def solve_equation(formula, choice):
     if choice == 1 :
         solution, feasible = dpll(formula, [])
     if choice == 2 :
-        solution, feasible = dpll_JW_TS(formula, [])
+        solution, feasible = dpll_MV(formula, [])
     if choice == 3 :
         solution, feasible = dpll_MOM(formula, [])
     if feasible :
@@ -275,6 +305,5 @@ def solve_equation(formula, choice):
     if len(only_truth_solution) != 9*9:
         print("not big enough solution")
         return False
-    return only_truth_solution
+    return only_truth_solution, backtrack, split
     
-
