@@ -2,10 +2,7 @@ from SAT.main import execute_main
 import math
 from SAT.decoder import encode_DIMACS
 from SAT.decoder import read_file
-import pandas as pd
-from SAT import main
 from SAT import dpll
-import statistics
 import os
 import shutil
 
@@ -51,47 +48,23 @@ def delete_9x9_folder():
     except OSError as e:
         print("Error: %s - %s." % (e.filename, e.strerror))
 
-num_clues = [32,47,62,77]
-tot_sudokos = 30
-h1_b_array = []
-h2_b_array = []
-h3_b_array = []
-h1_t_array = []
-h2_t_array = []
-h3_t_array = []
+num_clues = [77]
+tot_sudokus = 2
+def reset_backtrack_split():
+    dpll.backtrack = 0
+    dpll.split = 0
+
 for num_c in num_clues:
     num_sudoku = 1
     # deletes the contents in 9x9 folder and loads the files with the right amount of clues
     delete_9x9_folder()
     make_suduku_files(f"{num_c}clues9x9.txt")
-    main.backtrack_array_h1 = []
-    main.backtrack_array_h2 = []
-    main.backtrack_array_h3 = []
-    main.time_array_h1 = []
-    main.time_array_h2 = []
-    main.time_array_h3 = []
-    while num_sudoku < tot_sudokos + 1:
+    while num_sudoku < tot_sudokus + 1:
         link_to_suduku = os.path.join(os.getcwd(), f'tests/9x9/sudoku_nr_{num_sudoku}.txt')
-        dpll.backtrack = 0
-        dpll.split = 0
+        reset_backtrack_split()
         execute_main(['SA','-S1', link_to_suduku])  
-        dpll.backtrack = 0
-        dpll.split = 0
+        reset_backtrack_split()
         execute_main(['SA','-S2', link_to_suduku])
-        dpll.backtrack = 0
-        dpll.split = 0
+        reset_backtrack_split()
         execute_main(['SA','-S3', link_to_suduku])
         num_sudoku += 1
-    h1_b_array.append(statistics.mean(main.backtrack_array_h1))
-    h2_b_array.append(statistics.mean(main.backtrack_array_h2))
-    h3_b_array.append(statistics.mean(main.backtrack_array_h3))
-    h1_t_array.append(statistics.mean(main.time_array_h1))
-    h2_t_array.append(statistics.mean(main.time_array_h2))
-    h3_t_array.append(statistics.mean(main.time_array_h3))
-
-print(h1_b_array)
-print(h2_b_array)
-print(h3_b_array)
-print(h1_t_array)
-print(h2_t_array)
-print(h3_t_array)

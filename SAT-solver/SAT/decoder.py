@@ -1,8 +1,5 @@
 from io import DEFAULT_BUFFER_SIZE
 from os import read, remove
-import random
-import os
-import math
 
 def read_file (file_name):
     with open(file_name) as f:
